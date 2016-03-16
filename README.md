@@ -11,4 +11,4 @@ os
 random
 
 Execution
->galaxy.py model_run_file NUmberOfIterations
+>galaxy.py model_run_file Number_Of_Iterations
