@@ -11,10 +11,14 @@ import subprocess as subp
 from astropy.io.votable.tree import VOTableFile, Resource, Table, Field
 import os
 import random
-import time
+
+#global variables
+CMD_COADDED_OUTPUT=True
+CLEAN_UP=True
 
 def clean_up(Path, File, OutPrm, Prm, Iterations):
-    FILE_LIST=[]
+    ZIP_FILE_LIST=[]
+    RM_FILE_LIST=[]
     
     DICT={}
     for key in OutPrm.keys():
@@ -34,22 +38,27 @@ def clean_up(Path, File, OutPrm, Prm, Iterations):
     DICT['.log']=True
     for itr in range(Iterations):
         for key in DICT.keys():
-            FILE_LIST.append(File+'-'+str(itr)+key)
+            ZIP_FILE_LIST.append(File+'-'+str(itr)+key)
+            RM_FILE_LIST.append(File+'-'+str(itr)+key)
     for itr in range(Iterations):
         for key in ['cmd_']:
-            FILE_LIST.append(key+File+'-'+str(itr))
+            ZIP_FILE_LIST.append(key+File+'-'+str(itr))
+            RM_FILE_LIST.append(key+File+'-'+str(itr))
 
-    FILE_LIST.append(Prm['ACCRETION'][0])
-    FILE_LIST.append(Prm['ACCRETION'][1])
+    ZIP_FILE_LIST.append(Prm['ACCRETION'][0])
+    ZIP_FILE_LIST.append(Prm['ACCRETION'][1])
     
-    FLIST=''
-    for line in FILE_LIST:
-        FLIST+=line+' '
-    FLIST
+    ZIP_FLIST=''
+    RM_FLIST=''
+    for line in ZIP_FILE_LIST:
+        ZIP_FLIST+=line+' '
     
-    subp.call('zip '+Path+File+'.zip '+FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
-    subp.call('rm '+FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
-    return FILE_LIST
+    for line in RM_FILE_LIST:
+        RM_FLIST+=line+' '
+    
+    subp.call('zip '+Path+File+'.zip '+ZIP_FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
+    subp.call('mv '+File+' '+Path+File,shell=True,executable='/bin/sh',cwd=os.getcwd())
+    subp.call('rm '+RM_FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
 
 def ReadModelParameters(Path,File):
     PARAMETERS={}
@@ -64,18 +73,23 @@ def ReadModelParameters(Path,File):
 def ModelOutputFiles(Parameters):
     OUTPUT_FILES={}
     numOfTypes=int(Parameters['OUTPUT'][0])
-    #numOfTimes=int(Parameters['OUTPUT'][numOfTypes+1])
     for otype in Parameters['OUTPUT'][1:numOfTypes+1]:
         OUTPUT_FILES[otype]=[]
-        for t_time in Parameters['OUTPUT'][numOfTypes+2:]:
-            OUTPUT_FILES[otype].append(int(t_time))
+        if otype=='0d':
+            OUTPUT_FILES[otype].append(int( Parameters['OUTPUT'][-1] ))
+        else:
+            for t_time in Parameters['OUTPUT'][numOfTypes+2:]:
+                OUTPUT_FILES[otype].append(int(t_time))
     return OUTPUT_FILES
     
 def MakePlot(ax,X,Y,PLOT_PRM):
     if 'LINE' in PLOT_PRM.keys():
         ax.plot(X,Y,c='k',lw=1)
     else:
-        ax.scatter(X,Y,edgecolor='none',facecolor='k',s=1)
+        if 'POINTS_COLOR' in PLOT_PRM.keys():
+            ax.scatter(X,Y,edgecolor='none',facecolor=PLOT_PRM['POINTS_COLOR'],s=5)
+        else:
+            ax.scatter(X,Y,edgecolor='none',facecolor='k',s=5)
     for key in PLOT_PRM.keys():
         if key == 'XLIM':
             ax.set_xlim(PLOT_PRM[key])
@@ -84,12 +98,15 @@ def MakePlot(ax,X,Y,PLOT_PRM):
                 ax.set_ylim(PLOT_PRM[key][::-1])
             else:
                 ax.set_ylim(PLOT_PRM[key])
-        elif key == 'LOG':
+        elif key == 'YLOG':
             ax.set_yscale('log')
         elif key == 'XLABEL':
             ax.set_xlabel(PLOT_PRM[key], size=20)
         elif key == 'YLABEL':
-            ax.set_ylabel(PLOT_PRM[key], size=20)
+            if 'YLABEL_COLOR' in PLOT_PRM.keys():
+                ax.set_ylabel(PLOT_PRM[key], size=20, color=PLOT_PRM['YLABEL_COLOR'])
+            else:
+                ax.set_ylabel(PLOT_PRM[key], size=20)
         elif key == 'YTICKS':
             ax.set_yticks(PLOT_PRM[key])
         elif key == 'XTICKS':
@@ -147,7 +164,7 @@ def ReadModelOutput(Path,Pfile,Iterations,Parameters):
             MODEL['0d']={}
             for idx in range(Iterations):
                 MODEL['0d'][idx]={}
-                for akey in Parameters['1d']:
+                for akey in Parameters['0d']:
                     MODEL['0d'][idx][akey]=np.genfromtxt(Path+Pfile+'-'+str(idx)+'_igal.dat',\
                                    names=True,dtype='float32')
         elif key == 'cmd':
@@ -161,6 +178,8 @@ def ReadModelOutput(Path,Pfile,Iterations,Parameters):
     
 def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
     CMD={}
+    SHARED_PRM=0
+    FIRST_TIME=True
     for idx in range(Iterations):
         CMD[idx]={}
     for akey in Ages:
@@ -172,6 +191,11 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             cmd=CMD[idx][akey]
             ax = plt.subplot(gs[:, 0]) #cmd
             PLOT_PRM=SetBasicPlotParams(cmd[Filters[0]]-cmd[Filters[1]],cmd[Filters[1]], Filters)
+            if FIRST_TIME:
+                SHARED_PRM=PLOT_PRM
+                FIRST_TIME=False
+            else:
+                PLOT_PRM=SHARED_PRM
             PLOT_PRM['YINVERSE']=True
             MakePlot(ax,cmd[Filters[0]]-cmd[Filters[1]],cmd[Filters[1]],PLOT_PRM)
             
@@ -180,26 +204,50 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
                 del CMD[idx][akey], cmd
             
             ax = plt.subplot(gs[0, 1]) #sfh
-            PLOT_PRM=SetBasicPlotParams(Model_0d[idx][akey]['t']*1e-3,Model_0d[idx][akey]['TSFR'], ['t','TSFR'])
-            MakePlot(ax,Model_0d[idx][akey]['t']*1e-3,Model_0d[idx][akey]['TSFR'],PLOT_PRM)
-            ax.plot(Model_0d[idx][akey]['t']*1e-3,Model_0d[idx][akey]['ACC'])
-            tmin=np.amin(Model_0d[idx][akey]['t']*1e-3)
-            tmax=np.amax(Model_0d[idx][akey]['t']*1e-3)
-            tstep=(Model_0d[idx][akey]['t'][1]-Model_0d[idx][akey]['t'][0])
+            akey_0d=Ages[-1]
+            m0d=Model_0d[idx][akey_0d]
+            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['TSFR'], ['t','TSFR'])
+            MakePlot(ax,m0d['t']*1e-3,m0d['TSFR'],PLOT_PRM)
+            ax.plot(m0d['t']*1e-3,m0d['ACC'], color='b')
+            tmin=np.amin(m0d['t']*1e-3)
+            tmax=np.amax(m0d['t']*1e-3)
+            tstep=(m0d['t'][1]-m0d['t'][0])
             bins=np.arange(tmin,tmax+0.1,0.5)
-            ax.hist(Model_0d[idx][akey]['t']*1e-3,weights=Model_0d[idx][akey]['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True)
+            ax.hist(m0d['t']*1e-3,weights=m0d['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True, color='m')
             ax.set_ylim(bottom=1e-5)
             
+            ax2=ax.twinx()
+            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['GAS'], ['t','GAS'])
+            PLOT_PRM['YLOG']=True
+            PLOT_PRM['YLABEL_COLOR']='red'
+            PLOT_PRM['POINTS_COLOR']='red'
+            MakePlot(ax2,m0d['t']*1e-3,m0d['GAS'],PLOT_PRM)
+            GasMax=np.ceil( np.log10(max(m0d['GAS'])) )
+            ax2.set_ylim(bottom=1e4, top=10**GasMax)
+            ax2.set_yticks(np.logspace(4, GasMax, int(GasMax-4)+1))
+            
             ax = plt.subplot(gs[1, 1]) #mh
-            PLOT_PRM=SetBasicPlotParams(Model_0d[idx][akey]['t']*1e-3,Model_0d[idx][akey]['TSFR'], ['t','TSFR'])
-            MakePlot(ax,Model_0d[idx][akey]['t']*1e-3,Model_0d[idx][akey]['TSFR'],PLOT_PRM)
-            ax.plot(Model_0d[idx][akey]['t']*1e-3,Model_0d[idx][akey]['ACC'])
-            tmin=np.amin(Model_0d[idx][akey]['t']*1e-3)
-            tmax=np.amax(Model_0d[idx][akey]['t']*1e-3)
-            tstep=(Model_0d[idx][akey]['t'][1]-Model_0d[idx][akey]['t'][0])
-            bins=np.arange(tmin,tmax+0.1,0.5)
-            ax.hist(Model_0d[idx][akey]['t']*1e-3,weights=Model_0d[idx][akey]['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True)
-            ax.set_ylim(bottom=1e-5)
+            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['ZGAS'], ['t','ZGAS'])
+            PLOT_PRM['YLOG']=True
+            MakePlot(ax,m0d['t']*1e-3,m0d['ZGAS'],PLOT_PRM)
+            ax.set_ylim(1e-5, 0.2)
+            ax.set_yticks(np.logspace(-5, -1, 5))
+            ax2=ax.twinx()
+            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['STARS'], ['t','STARS'])
+            PLOT_PRM['YLOG']=True
+            PLOT_PRM['YLABEL_COLOR']='red'
+            PLOT_PRM['POINTS_COLOR']='red'
+            MakePlot(ax2,m0d['t']*1e-3,m0d['STARS'],PLOT_PRM)
+            StarsMax=np.ceil( np.log10(max(m0d['STARS'])) )
+            ax2.set_ylim(bottom=100, top=10**StarsMax)
+            ax2.set_yticks(np.logspace(2, StarsMax, int(StarsMax-2)+1))
+#            ax.plot(m0d['t']*1e-3,m0d['Zgas'])
+#            tmin=np.amin(m0d['t']*1e-3)
+#            tmax=np.amax(m0d['t']*1e-3)
+#            tstep=(m0d['t'][1]-m0d['t'][0])
+#            bins=np.arange(tmin,tmax+0.1,0.5)
+#            ax.hist(m0d['t']*1e-3,weights=m0d['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True)
+#            ax.set_ylim(bottom=1e-5)
             
             fig.savefig(Path+File+'_CMD_'+str(akey)+'_ITERATION-'+str(idx)+'.png', dpi=150)
             plt.close()
@@ -229,7 +277,7 @@ def PlotGenericType(OutPrm, Model, Pairs, Iterations, File, Path, PlotColumns=3)
                         finite=np.isfinite(Model[idx][akey][Pairs[plkey][1]])
                         MakePlot(ax.flat[plkey],Model[idx][akey][Pairs[plkey][0]][finite],\
                                         Model[idx][akey][Pairs[plkey][1]][finite],PLOT_PRM)
-        fig.savefig(Path+File+'_AGE_'+str(akey)+'.png', dpi=150)
+        fig.savefig(Path+File+'AGE_'+str(akey)+'.png', dpi=150)
         plt.close()
 
 #def WriteVOFiles(Path, File, Model, Iterations, OutPrm):
@@ -344,12 +392,14 @@ def WriteVOFiles(Path, File, Model, Iterations, OutPrm):
 def WriteVOFiles_CMD_Only(Path, File, Cmd,Iterations, OutPrm):
     itr=[]
     ages=[]
+    cmd=[]
     for iterat in Cmd.keys():
         for akey in Cmd[iterat].keys():
-            itr.append(np.repeat(iterat,Cmd[iterat].size))
-            ages.append(np.repeat(akey,Cmd[iterat].size))
+            cmd.append(Cmd[iterat][akey])
+            itr.append(np.repeat(iterat,Cmd[iterat][akey].size))
+            ages.append(np.repeat(akey,Cmd[iterat][akey].size))
         
-    a_cmd=np.hstack(Cmd)
+    a_cmd=np.hstack(cmd)
     a_iter=np.hstack(itr)
     a_ages=np.hstack(ages)
     
@@ -358,7 +408,6 @@ def WriteVOFiles_CMD_Only(Path, File, Cmd,Iterations, OutPrm):
         dt.append((name,'f4'))
     dt.append(('ModelAge','i4'))
     dt.append(('iteration','i4'))
-    
     
     cmd_stack=np.empty(a_cmd.size,dtype=dt)
     
@@ -431,12 +480,12 @@ def MainPlots(File, Params, Iterations=15):
     except:
         print '0d missing in the ouput'
     Cmd=0
-    try:
-        Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['B', 'I'], Iterations, File, PATH)
-        
-        PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
-    except:
-        print 'cmd missing in the ouput'
+#    try:
+    Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['B', 'I'], Iterations, File, PATH)
+    
+    PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
+#    except:
+#        print 'cmd missing in the ouput'
     
     WriteVOFiles(PATH, File, MODEL, Iterations, OutPrm)
     
@@ -464,7 +513,8 @@ def MainRun(File, Params, Iterations):
                 lines=lines.communicate()[0].rstrip('\n')
                 lines=int(lines)-1 # to account for the header
                 template=open('template').read()
-                tmp=template.replace('SEED', 'seed '+str(int(time.time())))
+                SEED=int(random.SystemRandom().random()*1e8)
+                tmp=template.replace('SEED', 'seed '+str(SEED))
                 tmp=tmp.replace('GALEMO_RESULTS', 'galemo_results '+str(lines)+' '+cmd_out)
                 tmp=tmp.replace('OUT', 'out '+cmd_out.replace('dat', 'cmd'))
                 subp.call('echo \"'+tmp+'\" >'+'cmd_'+File+'-'+str(i),shell=True,executable='/bin/sh')
@@ -476,9 +526,6 @@ def MainRun(File, Params, Iterations):
 def Main(File, Iterations):
     params=ReadModelParameters(os.getcwd()+'/',File)
     MainRun(File, params, Iterations)
-    
-    CMD_COADDED_OUTPUT=True
-    CLEAN_UP=True
     MainPlots(File, params, Iterations)
     
 if __name__=='__main__':
