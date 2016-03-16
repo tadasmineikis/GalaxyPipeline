@@ -9,6 +9,6 @@ subprocess
 astropy
 os
 random
-time?
 
-Check if time module is really necessary.
+Execution
+>galaxy.py model_run_file NUmberOfIterations
