@@ -481,7 +481,7 @@ def MainPlots(File, Params, Iterations=15):
         print '0d missing in the ouput'
     Cmd=0
 #    try:
-    Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['B', 'I'], Iterations, File, PATH)
+    Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
     
     PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
 #    except:
