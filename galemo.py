@@ -14,7 +14,7 @@ import random
 
 #global variables
 CMD_COADDED_OUTPUT=True
-CLEAN_UP=True
+CLEAN_UP=False
 
 def clean_up(Path, File, OutPrm, Prm, Iterations):
     ZIP_FILE_LIST=[]
@@ -101,7 +101,8 @@ def MakePlot(ax,X,Y,PLOT_PRM):
         elif key == 'YLOG':
             ax.set_yscale('log')
         elif key == 'XLABEL':
-            ax.set_xlabel(PLOT_PRM[key], size=20)
+            if 'CMD' in PLOT_PRM.keys():
+                ax.set_xlabel(PLOT_PRM[key]+' - '+PLOT_PRM['YLABEL'], size=20)
         elif key == 'YLABEL':
             if 'YLABEL_COLOR' in PLOT_PRM.keys():
                 ax.set_ylabel(PLOT_PRM[key], size=20, color=PLOT_PRM['YLABEL_COLOR'])
@@ -140,7 +141,7 @@ def SetBasicPlotParams(X,Y, Keys):
         YTICKS=np.linspace(YMIN,YMAX,5)
         
     return {'XLIM':[XMIN,XMAX],'YLIM':[YMIN,YMAX],\
-            'XLABEL':Keys[0].replace('_','-'),'YLABEL':Keys[1].replace('_','-'),\
+            'XLABEL':Keys[0].replace('_',''),'YLABEL':Keys[1].replace('_',''),\
            'YTICKS':YTICKS,'XTICKS':XTICKS}
          
 def ReadModelOutput(Path,Pfile,Iterations,Parameters):
@@ -197,6 +198,7 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             else:
                 PLOT_PRM=SHARED_PRM
             PLOT_PRM['YINVERSE']=True
+            PLOT_PRM['CMD']=True
             MakePlot(ax,cmd[Filters[0]]-cmd[Filters[1]],cmd[Filters[1]],PLOT_PRM)
             
             global CMD_COADDED_OUTPUT
@@ -208,7 +210,7 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             m0d=Model_0d[idx][akey_0d]
             PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['TSFR'], ['t','TSFR'])
             MakePlot(ax,m0d['t']*1e-3,m0d['TSFR'],PLOT_PRM)
-            ax.plot(m0d['t']*1e-3,m0d['ACC'], color='b')
+#            ax.plot(m0d['t']*1e-3,m0d['ACC'], color='b')
             tmin=np.amin(m0d['t']*1e-3)
             tmax=np.amax(m0d['t']*1e-3)
             tstep=(m0d['t'][1]-m0d['t'][0])
@@ -518,14 +520,14 @@ def MainRun(File, Params, Iterations):
                 tmp=tmp.replace('GALEMO_RESULTS', 'galemo_results '+str(lines)+' '+cmd_out)
                 tmp=tmp.replace('OUT', 'out '+cmd_out.replace('dat', 'cmd'))
                 subp.call('echo \"'+tmp+'\" >'+'cmd_'+File+'-'+str(i),shell=True,executable='/bin/sh')
-                subp.call('./gCMD_0.21.4 cmd_'+File+'-'+str(i),shell=True,executable='/bin/sh')
+                subp.call('./gCMD_0.21.5 cmd_'+File+'-'+str(i),shell=True,executable='/bin/sh')
         except:
             print 'CMDs missing in the output'
     print "Calculations of the models complete!" 
     
 def Main(File, Iterations):
     params=ReadModelParameters(os.getcwd()+'/',File)
-    MainRun(File, params, Iterations)
+#    MainRun(File, params, Iterations)
     MainPlots(File, params, Iterations)
     
 if __name__=='__main__':
