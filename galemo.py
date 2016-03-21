@@ -98,10 +98,19 @@ def ModelOutputFiles(Parameters):
     for otype in Parameters['OUTPUT'][1:numOfTypes+1]:
         OUTPUT_FILES[otype]=[]
         if otype=='0d':
-            OUTPUT_FILES[otype].append(int( Parameters['OUTPUT'][-1] ))
+            OUTPUT_FILES[otype].append(int( Parameters['GALAXY_AGE'][0] ))
         else:
-            for t_time in Parameters['OUTPUT'][numOfTypes+2:]:
-                OUTPUT_FILES[otype].append(int(t_time))
+            # new type output times specification
+            if Parameters['OUTPUT'][numOfTypes+1] =='var':
+                t_time0=int(Parameters['OUTPUT'][numOfTypes+2])
+                t_time1=int(Parameters['OUTPUT'][numOfTypes+3])
+                t_step=int(Parameters['OUTPUT'][numOfTypes+4])
+                for ind in range( (t_time1-t_time0)/t_step+1):
+                    OUTPUT_FILES[otype].append(int(t_time0+t_step*ind))
+            #old type output times specification
+            elif is_number(Parameters['OUTPUT'][numOfTypes+1]):
+                for t_time in Parameters['OUTPUT'][numOfTypes+2:]:
+                    OUTPUT_FILES[otype].append(int(t_time))
     return OUTPUT_FILES
     
 def MakePlot(ax,X,Y,PLOT_PRM):
@@ -504,12 +513,12 @@ def MainPlots(File, Params, Iterations=15):
     except:
         print '0d missing in the ouput'
     Cmd=0
-#    try:
-    Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
-    
-    PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
-#    except:
-#        print 'cmd missing in the ouput'
+    try:
+        Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
+        
+        PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
+    except:
+        print 'cmd missing in the ouput'
     
     WriteVOFiles(PATH, File, MODEL, Iterations, OutPrm)
     
