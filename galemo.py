@@ -14,8 +14,15 @@ import random
 
 #global variables
 CMD_COADDED_OUTPUT=True
-CLEAN_UP=False
+CLEAN_UP=True
 
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+        
 def clean_up(Path, File, OutPrm, Prm, Iterations):
     ZIP_FILE_LIST=[]
     RM_FILE_LIST=[]
@@ -47,6 +54,21 @@ def clean_up(Path, File, OutPrm, Prm, Iterations):
 
     ZIP_FILE_LIST.append(Prm['ACCRETION'][0])
     ZIP_FILE_LIST.append(Prm['ACCRETION'][1])
+    
+    if is_number(Prm['SFE'][0]):
+        pass
+    else:
+        ZIP_FILE_LIST.append(Prm['SFE'][0])
+    
+    if is_number(Prm['SFE_POW'][0]):
+        pass
+    else:
+        ZIP_FILE_LIST.append(Prm['SFE_POW'][0])
+        
+    if is_number(Prm['TRIGGERED'][0]):
+        pass
+    else:
+        ZIP_FILE_LIST.append(Prm['TRIGGERED'][0])
     
     ZIP_FLIST=''
     RM_FLIST=''
@@ -527,7 +549,7 @@ def MainRun(File, Params, Iterations):
     
 def Main(File, Iterations):
     params=ReadModelParameters(os.getcwd()+'/',File)
-#    MainRun(File, params, Iterations)
+    MainRun(File, params, Iterations)
     MainPlots(File, params, Iterations)
     
 if __name__=='__main__':
