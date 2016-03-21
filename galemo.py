@@ -49,8 +49,9 @@ def clean_up(Path, File, OutPrm, Prm, Iterations):
             RM_FILE_LIST.append(File+'-'+str(itr)+key)
     for itr in range(Iterations):
         for key in ['cmd_']:
-            ZIP_FILE_LIST.append(key+File+'-'+str(itr))
-            RM_FILE_LIST.append(key+File+'-'+str(itr))
+            for akey in OutPrm['cmd']:
+                ZIP_FILE_LIST.append(key+File+'-'+str(itr)+'_'+str(akey))
+                RM_FILE_LIST.append(key+File+'-'+str(itr)+'_'+str(akey))
 
     ZIP_FILE_LIST.append(Prm['ACCRETION'][0])
     ZIP_FILE_LIST.append(Prm['ACCRETION'][1])
@@ -118,9 +119,9 @@ def MakePlot(ax,X,Y,PLOT_PRM):
         ax.plot(X,Y,c='k',lw=1)
     else:
         if 'POINTS_COLOR' in PLOT_PRM.keys():
-            ax.scatter(X,Y,edgecolor='none',facecolor=PLOT_PRM['POINTS_COLOR'],s=5)
+            ax.scatter(X,Y,edgecolor='none',facecolor=PLOT_PRM['POINTS_COLOR'],s=5, **PLOT_PRM['kwdict'])
         else:
-            ax.scatter(X,Y,edgecolor='none',facecolor='k',s=5)
+            ax.scatter(X,Y,edgecolor='none',facecolor='k',s=5, **PLOT_PRM['kwdict'])
     for key in PLOT_PRM.keys():
         if key == 'XLIM':
             ax.set_xlim(PLOT_PRM[key])
@@ -173,7 +174,7 @@ def SetBasicPlotParams(X,Y, Keys):
         
     return {'XLIM':[XMIN,XMAX],'YLIM':[YMIN,YMAX],\
             'XLABEL':Keys[0].replace('_',''),'YLABEL':Keys[1].replace('_',''),\
-           'YTICKS':YTICKS,'XTICKS':XTICKS}
+           'YTICKS':YTICKS,'XTICKS':XTICKS, 'kwdict':{}}
          
 def ReadModelOutput(Path,Pfile,Iterations,Parameters):
     MODEL={}
@@ -240,13 +241,14 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             akey_0d=Ages[-1]
             m0d=Model_0d[idx][akey_0d]
             PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['TSFR'], ['t','TSFR'])
+            PLOT_PRM['kwdict']['alpha']=0.2
             MakePlot(ax,m0d['t']*1e-3,m0d['TSFR'],PLOT_PRM)
 #            ax.plot(m0d['t']*1e-3,m0d['ACC'], color='b')
             tmin=np.amin(m0d['t']*1e-3)
             tmax=np.amax(m0d['t']*1e-3)
             tstep=(m0d['t'][1]-m0d['t'][0])
             bins=np.arange(tmin,tmax+0.1,0.5)
-            ax.hist(m0d['t']*1e-3,weights=m0d['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True, color='m')
+            ax.hist(m0d['t']*1e-3,weights=m0d['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True, color='k')
             ax.set_ylim(bottom=1e-5)
             
             ax2=ax.twinx()
@@ -493,8 +495,9 @@ def MainPlots(File, Params, Iterations=15):
            9:['r','SF_events','YLOG'],10:['r','SP_events','YLOG'],11:['r','Tgas','YLOG']}
         
         PlotGenericType(OutPrm['1d'], MODEL['1d'], PAIRS, Iterations, File+'_1d_', PATH, PlotColumns=3)
-    except:
-        print '1d missing in the ouput'
+    except Exception as e:
+        print '1d ouput failed'
+        print repr(e)
         
     try:
         PAIRS={0:['r','mgas','YLOG'],   1:['r','mstr','YLOG'], 2:['r','zgas','YLOG'],\
@@ -502,23 +505,26 @@ def MainPlots(File, Params, Iterations=15):
                    6:['r','sfr_t','YLOG'],  7:['r','TVEL']}
         
         PlotGenericType(OutPrm['2d'], MODEL['2d'], PAIRS, Iterations, File+'_2d_', PATH, PlotColumns=2)
-    except:
-        print '2d missing in the ouput'
+    except Exception as e:
+        print '2d ouput failed'
+        print repr(e)
 
     try:
         PAIRS={0:['t','TSFR','YLOG'],   1:['t','ACC','YLOG'], 2:['t','SP_E','YLOG'],\
                    3:['t','TR_E','YLOG'],4:['t','OTFL','YLOG'],5:['t','ST_GAS_ACC','YLOG']}
         
         PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
-    except:
-        print '0d missing in the ouput'
+    except Exception as e:
+        print '0d ouput failed'
+        print repr(e)
     Cmd=0
     try:
         Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
         
         PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
-    except:
-        print 'cmd missing in the ouput'
+    except Exception as e:
+        print 'cmd ouput failed'
+        print repr(e)
     
     WriteVOFiles(PATH, File, MODEL, Iterations, OutPrm)
     
@@ -550,15 +556,15 @@ def MainRun(File, Params, Iterations):
                 tmp=template.replace('SEED', 'seed '+str(SEED))
                 tmp=tmp.replace('GALEMO_RESULTS', 'galemo_results '+str(lines)+' '+cmd_out)
                 tmp=tmp.replace('OUT', 'out '+cmd_out.replace('dat', 'cmd'))
-                subp.call('echo \"'+tmp+'\" >'+'cmd_'+File+'-'+str(i),shell=True,executable='/bin/sh')
-                subp.call('./gCMD_0.21.5 cmd_'+File+'-'+str(i),shell=True,executable='/bin/sh')
+                subp.call('echo \"'+tmp+'\" >'+'cmd_'+File+'-'+str(i)+'_'+str(akey),shell=True,executable='/bin/sh')
+                subp.call('./gCMD_0.21.5 cmd_'+File+'-'+str(i)+'_'+str(akey),shell=True,executable='/bin/sh')
         except:
             print 'CMDs missing in the output'
     print "Calculations of the models complete!" 
     
 def Main(File, Iterations):
     params=ReadModelParameters(os.getcwd()+'/',File)
-    MainRun(File, params, Iterations)
+#    MainRun(File, params, Iterations)
     MainPlots(File, params, Iterations)
     
 if __name__=='__main__':
