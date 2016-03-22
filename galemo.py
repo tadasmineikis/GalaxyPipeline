@@ -8,124 +8,22 @@ from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 import sys
 import subprocess as subp
-from astropy.io.votable.tree import VOTableFile, Resource, Table, Field
 import os
 import random
-import pandas as pd
+
 
 #global variables
 CMD_COADDED_OUTPUT=True
 CLEAN_UP=False
 
-def read_file(name):
-    f=open(name,'r')
-    head=f.readline().split()
-    f.close()
-    head[0]=head[0][1:]
-    DTYPE={}
-    for item in head:
-        DTYPE[item]=np.float32
-    df=pd.read_table(name,na_values='\"\"',names=head,header=0,\
-    delim_whitespace=True,index_col=False,dtype=DTYPE,as_recarray=True)
-    return df
+#def is_number(s):
+#    try:
+#        float(s)
+#        return True
+#    except ValueError:
+#        return False
 
-def is_number(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-        
-def clean_up(Path, File, OutPrm, Prm, Iterations):
-    ZIP_FILE_LIST=[]
-    RM_FILE_LIST=[]
-    
-    DICT={}
-    for key in OutPrm.keys():
-        if key == '0d':
-            DICT['_igal.dat']=True
-        elif key == '1d':
-            for akey in OutPrm[key]:
-                DICT['_rings_'+str(akey)+'.dat']=True
-        elif key == '2d':
-            for akey in OutPrm[key]:
-                DICT['_cells_'+str(akey)+'.dat']=True
-        elif key == 'cmd':
-            for akey in OutPrm[key]:
-                DICT['_cmd_'+str(akey)+'.dat']=True
-                DICT['_cmd_'+str(akey)+'.cmd']=True
-    DICT['']=True
-    DICT['.log']=True
-    for itr in range(Iterations):
-        for key in DICT.keys():
-            ZIP_FILE_LIST.append(File+'-'+str(itr)+key)
-            RM_FILE_LIST.append(File+'-'+str(itr)+key)
-    for itr in range(Iterations):
-        for key in ['cmd_']:
-            for akey in OutPrm['cmd']:
-                ZIP_FILE_LIST.append(key+File+'-'+str(itr)+'_'+str(akey))
-                RM_FILE_LIST.append(key+File+'-'+str(itr)+'_'+str(akey))
 
-    ZIP_FILE_LIST.append(Prm['ACCRETION'][0])
-    ZIP_FILE_LIST.append(Prm['ACCRETION'][1])
-    
-    if is_number(Prm['SFE'][0]):
-        pass
-    else:
-        ZIP_FILE_LIST.append(Prm['SFE'][0])
-    
-    if is_number(Prm['SFE_POW'][0]):
-        pass
-    else:
-        ZIP_FILE_LIST.append(Prm['SFE_POW'][0])
-        
-    if is_number(Prm['TRIGGERED'][0]):
-        pass
-    else:
-        ZIP_FILE_LIST.append(Prm['TRIGGERED'][0])
-    
-    ZIP_FLIST=''
-    RM_FLIST=''
-    for line in ZIP_FILE_LIST:
-        ZIP_FLIST+=line+' '
-    
-    for line in RM_FILE_LIST:
-        RM_FLIST+=line+' '
-    
-    subp.call('zip '+Path+File+'.zip '+ZIP_FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
-    subp.call('mv '+File+' '+Path+File,shell=True,executable='/bin/sh',cwd=os.getcwd())
-    subp.call('rm '+RM_FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
-
-def ReadModelParameters(Path,File):
-    PARAMETERS={}
-    for line in open(Path+File,'r'):
-        if line[0]!='#':
-            sline=line.split()
-            PARAMETERS[sline[0]]=[]
-            for i in range(len(sline)-1):
-                PARAMETERS[sline[0]].append(sline[i+1])
-    return PARAMETERS
-
-def ModelOutputFiles(Parameters):
-    OUTPUT_FILES={}
-    numOfTypes=int(Parameters['OUTPUT'][0])
-    for otype in Parameters['OUTPUT'][1:numOfTypes+1]:
-        OUTPUT_FILES[otype]=[]
-        if otype=='0d':
-            OUTPUT_FILES[otype].append(int( Parameters['GALAXY_AGE'][0] ))
-        else:
-            # new type output times specification
-            if Parameters['OUTPUT'][numOfTypes+1] =='var':
-                t_time0=int(Parameters['OUTPUT'][numOfTypes+2])
-                t_time1=int(Parameters['OUTPUT'][numOfTypes+3])
-                t_step=int(Parameters['OUTPUT'][numOfTypes+4])
-                for ind in range( (t_time1-t_time0)/t_step+1):
-                    OUTPUT_FILES[otype].append(int(t_time0+t_step*ind))
-            #old type output times specification
-            elif is_number(Parameters['OUTPUT'][numOfTypes+1]):
-                for t_time in Parameters['OUTPUT'][numOfTypes+2:]:
-                    OUTPUT_FILES[otype].append(int(t_time))
-    return OUTPUT_FILES
     
 def MakePlot(ax,X,Y,PLOT_PRM):
     if 'LINE' in PLOT_PRM.keys():
@@ -189,34 +87,7 @@ def SetBasicPlotParams(X,Y, Keys):
             'XLABEL':Keys[0].replace('_',''),'YLABEL':Keys[1].replace('_',''),\
            'YTICKS':YTICKS,'XTICKS':XTICKS, 'kwdict':{}}
          
-def ReadModelOutput(Path,Pfile,Iterations,Parameters):
-    MODEL={}
-    for key in Parameters:
-        if key == '2d':
-            MODEL['2d']={}
-            for idx in range(Iterations):
-                MODEL['2d'][idx]={}
-                for akey in Parameters['2d']:
-                    MODEL['2d'][idx][akey]=read_file(Path+Pfile+'-'+str(idx)+'_cells_'+str(akey)+'.dat')
-        elif key == '1d':
-            MODEL['1d']={}
-            for idx in range(Iterations):
-                MODEL['1d'][idx]={}
-                for akey in Parameters['1d']:
-                    MODEL['1d'][idx][akey]=read_file(Path+Pfile+'-'+str(idx)+'_rings_'+str(akey)+'.dat')
-        elif key == '0d':
-            MODEL['0d']={}
-            for idx in range(Iterations):
-                MODEL['0d'][idx]={}
-                for akey in Parameters['0d']:
-                    MODEL['0d'][idx][akey]=read_file(Path+Pfile+'-'+str(idx)+'_igal.dat')
-        elif key == 'cmd':
-            MODEL['cmd']={}
-            for idx in range(Iterations):
-                MODEL['cmd'][idx]={}
-                for akey in Parameters['cmd']:
-                    MODEL['cmd'][idx][akey]=Path+Pfile+'-'+str(idx)+'_cmd_'+str(akey)+'.cmd'
-    return MODEL
+
     
     
 def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
@@ -316,140 +187,6 @@ def PlotGenericType(OutPrm, Model, Pairs, Iterations, File, Path, PlotColumns=3)
                                         Model[idx][akey][Pairs[plkey][1]][finite],PLOT_PRM)
         fig.savefig(Path+File+'AGE_'+str(akey)+'.png', dpi=150)
         plt.close()
-
-def WriteVOFiles(Path, File, Model, Iterations, OutPrm):
-    for key in OutPrm.keys():
-        if key =='cmd':
-            pass
-        else:
-            Res={}
-            # Create a new VOTable file...
-            votable = VOTableFile()
-            
-            Res[key]={}
-            Res[key]['resource']=Resource(name=key)
-            votable.resources.append(Res[key]['resource'])
-            
-            a_age=[]
-            a_itr=[]
-            a_model=[]
-            for itr in Model[key].keys():
-                for akey in Model[key][itr].keys():
-                    a_model.append(Model[key][itr][akey])
-                    a_age.append(np.repeat(akey,Model[key][itr][akey].size))
-                    a_itr.append(np.repeat(itr,Model[key][itr][akey].size))
-            st_model=np.hstack(a_model)
-            st_age=np.hstack(a_age)
-            st_itr=np.hstack(a_itr)
-
-            a_stack=np.hstack( [st_model.view(np.float32).reshape(st_model.shape+(-1,)),\
-                                st_age.reshape(st_age.shape+(-1,)),\
-                              st_itr.reshape(st_itr.shape+(-1,))])
-            
-            FIELDS=[]
-            for midx in range(Iterations):
-                for akey in OutPrm[key]:
-                    for ckey in Model[key][midx][akey].dtype.names:
-                        FIELDS.append( Field(votable, name=ckey,\
-                                         datatype="float", arraysize="1") )
-                    size=Model[key][midx][akey].size*Iterations*len(OutPrm[key])
-                    names=Model[key][midx][akey].dtype.names
-                    dt=Model[key][midx][akey].dtype
-                    break
-                break
-
-            names+=('age','iteration',)
-            dt=[]
-            for name in names:
-                if name=='age':
-                    dt.append((name,'i4'))
-                elif name=='iteration' or name =='age':
-                    dt.append((name,'i4'))
-                else:
-                    dt.append((name,'f4'))
-            
-            stack=np.empty(a_stack.shape[0],dtype=dt)
-            
-            for i, nm in zip(range(a_stack.shape[1]),stack.dtype.names):
-                stack[nm]=a_stack[:,i]
-    
-            FIELDS.append( Field(votable, name='age',\
-                                         datatype="int", arraysize="1") )
-            FIELDS.append( Field(votable, name='iteration',\
-                                         datatype="int", arraysize="1") )
-            if key =='0d':
-                Res[key]['table'] = Table(votable,name='Table_'+key,\
-                    nrows=size)
-            else:
-                Res[key]['table'] = Table(votable,name='Table_'+key,\
-                    nrows=size)
-            Res[key]['resource'].tables.append(Res[key]['table'])
-                   
-            Res[key]['table'].fields.extend(FIELDS)
-            Res[key]['table'].create_arrays(size)
-
-            Res[key]['table'].array[:]=stack[list(stack.dtype.names)][:]
-            
-            votable.to_xml(Path+File+'_'+str(key)+ ".xml", tabledata_format="binary", compressed=True)
-            del votable, Res, FIELDS
-            
-def WriteVOFiles_CMD_Only(Path, File, Cmd,Iterations, OutPrm):
-    itr=[]
-    ages=[]
-    cmd=[]
-    for iterat in Cmd.keys():
-        for akey in Cmd[iterat].keys():
-            cmd.append(Cmd[iterat][akey])
-            itr.append(np.repeat(iterat,Cmd[iterat][akey].size))
-            ages.append(np.repeat(akey,Cmd[iterat][akey].size))
-        
-    a_cmd=np.hstack(cmd)
-    a_iter=np.hstack(itr)
-    a_ages=np.hstack(ages)
-    
-    dt=[]
-    for name in a_cmd.dtype.names:
-        dt.append((name,'f4'))
-    dt.append(('ModelAge','i4'))
-    dt.append(('iteration','i4'))
-    
-    cmd_stack=np.empty(a_cmd.size,dtype=dt)
-    
-    for name in a_cmd.dtype.names:
-        cmd_stack[name]=a_cmd[name]
-    cmd_stack['ModelAge']=a_ages
-    cmd_stack['iteration']=a_iter
-    
-    Res={}
-    # Create a new VOTable file...
-    votable = VOTableFile()
-
-    Res={}
-    Res['resource']=Resource(name='cmd')
-    votable.resources.append(Res['resource'])
-
-    FIELDS=[]
-    for ckey in a_cmd.dtype.names:
-        if ckey=='ssp_index':
-            FIELDS.append( Field(votable, name=ckey,datatype="int", arraysize="1") )
-        else:
-            FIELDS.append( Field(votable, name=ckey,datatype="float", arraysize="1") )
-    size=a_cmd.size
-
-    FIELDS.append( Field(votable, name='ModelAge', datatype="int", arraysize="1") )
-    FIELDS.append( Field(votable, name='iteration',datatype="int", arraysize="1") )
-
-    Res['table'] = Table(votable,name='Table_cmd',  nrows=size)
-    Res['resource'].tables.append(Res['table'])
-
-    Res['table'].fields.extend(FIELDS)
-    Res['table'].create_arrays(size)
-    
-
-    Res['table'].array[:]=cmd_stack[list(cmd_stack.dtype.names)][:]
-
-    votable.to_xml(Path+File+"_cmd.xml", tabledata_format="binary", compressed=True)
-    del votable, Res, FIELDS, Cmd, a_cmd, cmd_stack
     
 def MainPlots(File, Params, Iterations=15):
     subp.call('mkdir '+'Dir_'+File,shell=True,executable='/bin/sh', cwd=os.getcwd())
@@ -533,7 +270,7 @@ def MainRun(File, Params, Iterations):
     
 def Main(File, Iterations):
     params=ReadModelParameters(os.getcwd()+'/',File)
-#    MainRun(File, params, Iterations)
+    MainRun(File, params, Iterations)
     MainPlots(File, params, Iterations)
     
 if __name__=='__main__':
