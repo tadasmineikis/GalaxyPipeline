@@ -11,10 +11,23 @@ import subprocess as subp
 from astropy.io.votable.tree import VOTableFile, Resource, Table, Field
 import os
 import random
+import pandas as pd
 
 #global variables
 CMD_COADDED_OUTPUT=True
-CLEAN_UP=True
+CLEAN_UP=False
+
+def read_file(name):
+    f=open(name,'r')
+    head=f.readline().split()
+    head[0]=head[0][1:]
+    DTYPE={}
+    for item in head:
+        DTYPE[item]=np.float32
+    df=pd.read_table(name,na_values='\"\"',names=head,header=0,\
+    delim_whitespace=True,index_col=False,dtype=DTYPE,as_recarray=True)
+    f.close()
+    return df
 
 def is_number(s):
     try:
@@ -184,22 +197,19 @@ def ReadModelOutput(Path,Pfile,Iterations,Parameters):
             for idx in range(Iterations):
                 MODEL['2d'][idx]={}
                 for akey in Parameters['2d']:
-                    MODEL['2d'][idx][akey]=np.genfromtxt(Path+Pfile+'-'+str(idx)+'_cells_'+str(akey)+'.dat',\
-                                   names=True,dtype='float32')
+                    MODEL['2d'][idx][akey]=read_file(Path+Pfile+'-'+str(idx)+'_cells_'+str(akey)+'.dat')
         elif key == '1d':
             MODEL['1d']={}
             for idx in range(Iterations):
                 MODEL['1d'][idx]={}
                 for akey in Parameters['1d']:
-                    MODEL['1d'][idx][akey]=np.genfromtxt(Path+Pfile+'-'+str(idx)+'_rings_'+str(akey)+'.dat',\
-                                   names=True,dtype='float32')
+                    MODEL['1d'][idx][akey]=read_file(Path+Pfile+'-'+str(idx)+'_rings_'+str(akey)+'.dat')
         elif key == '0d':
             MODEL['0d']={}
             for idx in range(Iterations):
                 MODEL['0d'][idx]={}
                 for akey in Parameters['0d']:
-                    MODEL['0d'][idx][akey]=np.genfromtxt(Path+Pfile+'-'+str(idx)+'_igal.dat',\
-                                   names=True,dtype='float32')
+                    MODEL['0d'][idx][akey]=read_file(Path+Pfile+'-'+str(idx)+'_igal.dat')
         elif key == 'cmd':
             MODEL['cmd']={}
             for idx in range(Iterations):
@@ -220,7 +230,7 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             fig=plt.figure(figsize=(12,8))
             gs = gridspec.GridSpec(2,2)
             
-            CMD[idx][akey]=np.genfromtxt(Model_cmd[idx][akey],names=True,dtype='f4')
+            CMD[idx][akey]=read_file(Model_cmd[idx][akey])
             cmd=CMD[idx][akey]
             ax = plt.subplot(gs[:, 0]) #cmd
             PLOT_PRM=SetBasicPlotParams(cmd[Filters[0]]-cmd[Filters[1]],cmd[Filters[1]], Filters)
@@ -243,7 +253,6 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['TSFR'], ['t','TSFR'])
             PLOT_PRM['kwdict']['alpha']=0.2
             MakePlot(ax,m0d['t']*1e-3,m0d['TSFR'],PLOT_PRM)
-#            ax.plot(m0d['t']*1e-3,m0d['ACC'], color='b')
             tmin=np.amin(m0d['t']*1e-3)
             tmax=np.amax(m0d['t']*1e-3)
             tstep=(m0d['t'][1]-m0d['t'][0])
@@ -276,13 +285,6 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             StarsMax=np.ceil( np.log10(max(m0d['STARS'])) )
             ax2.set_ylim(bottom=100, top=10**StarsMax)
             ax2.set_yticks(np.logspace(2, StarsMax, int(StarsMax-2)+1))
-#            ax.plot(m0d['t']*1e-3,m0d['Zgas'])
-#            tmin=np.amin(m0d['t']*1e-3)
-#            tmax=np.amax(m0d['t']*1e-3)
-#            tstep=(m0d['t'][1]-m0d['t'][0])
-#            bins=np.arange(tmin,tmax+0.1,0.5)
-#            ax.hist(m0d['t']*1e-3,weights=m0d['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True)
-#            ax.set_ylim(bottom=1e-5)
             
             fig.savefig(Path+File+'_CMD_'+str(akey)+'_ITERATION-'+str(idx)+'.png', dpi=150)
             plt.close()
@@ -315,39 +317,6 @@ def PlotGenericType(OutPrm, Model, Pairs, Iterations, File, Path, PlotColumns=3)
         fig.savefig(Path+File+'AGE_'+str(akey)+'.png', dpi=150)
         plt.close()
 
-#def WriteVOFiles(Path, File, Model, Iterations, OutPrm):
-#    for key in OutPrm.keys():
-#        if key =='cmd':
-#            pass
-#        else:
-#            Res={}
-#            # Create a new VOTable file...
-#            votable = VOTableFile()
-#            
-#            Res[key]={}
-#            Res[key]['resource']=Resource(name=key)
-#            votable.resources.append(Res[key]['resource'])
-#            for midx in range(Iterations):
-#                if key =='0d':
-#                    Res[key]['table'] = Table(votable,name='Table_'+key+'-'+str(midx),\
-#                    nrows=Model[key][midx][OutPrm[key][0]].size)
-#                else:
-#                    Res[key]['table'] = Table(votable,name='Table_'+key+'-'+str(midx),\
-#                    nrows=Model[key][midx][OutPrm[key][0]].size)
-#                Res[key]['resource'].tables.append(Res[key]['table'])
-#                FIELDS=[]
-#                for akey in OutPrm[key]:
-#                    for ckey in Model[key][midx][akey].dtype.names:
-#                        FIELDS.append( Field(votable, name=ckey,\
-#                                         datatype="float", arraysize="1") )
-#                   
-#                Res[key]['table'].fields.extend(FIELDS)
-#                Res[key]['table'].create_arrays(Model[key][midx][OutPrm[key][0]].size)
-#                Names=Model[key][midx][OutPrm[key][0]].dtype.names
-#                for akey in OutPrm[key]:
-#                    Res[key]['table'].array[:]=Model[key][midx][akey][list(Names)][:]
-#            votable.to_xml(Path+File+'_'+str(key)+ ".xml", tabledata_format="binary")
-#            del votable, Res, FIELDS
 def WriteVOFiles(Path, File, Model, Iterations, OutPrm):
     for key in OutPrm.keys():
         if key =='cmd':
@@ -564,7 +533,7 @@ def MainRun(File, Params, Iterations):
     
 def Main(File, Iterations):
     params=ReadModelParameters(os.getcwd()+'/',File)
-#    MainRun(File, params, Iterations)
+    MainRun(File, params, Iterations)
     MainPlots(File, params, Iterations)
     
 if __name__=='__main__':
