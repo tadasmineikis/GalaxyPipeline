@@ -10,11 +10,12 @@ import sys
 import subprocess as subp
 import os
 import random
+from ModelIO import Model_IO
 
 
 #global variables
 CMD_COADDED_OUTPUT=True
-CLEAN_UP=False
+CLEAN_UP=True
 
 #def is_number(s):
 #    try:
@@ -101,8 +102,7 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             fig=plt.figure(figsize=(12,8))
             gs = gridspec.GridSpec(2,2)
             
-            CMD[idx][akey]=read_file(Model_cmd[idx][akey])
-            cmd=CMD[idx][akey]
+            cmd=Model_cmd[idx][akey]
             ax = plt.subplot(gs[:, 0]) #cmd
             PLOT_PRM=SetBasicPlotParams(cmd[Filters[0]]-cmd[Filters[1]],cmd[Filters[1]], Filters)
             if FIRST_TIME:
@@ -188,11 +188,11 @@ def PlotGenericType(OutPrm, Model, Pairs, Iterations, File, Path, PlotColumns=3)
         fig.savefig(Path+File+'AGE_'+str(akey)+'.png', dpi=150)
         plt.close()
     
-def MainPlots(File, Params, Iterations=15):
+def MainPlots(File, Model, Iterations=15):
     subp.call('mkdir '+'Dir_'+File,shell=True,executable='/bin/sh', cwd=os.getcwd())
     PATH='Dir_'+File+"/"
-    OutPrm=ModelOutputFiles(Params)
-    MODEL=ReadModelOutput(os.getcwd()+'/',File,Iterations,OutPrm)
+#    OutPrm=ModelOutputFiles(Params)
+#    MODEL=ReadModelOutput(os.getcwd()+'/',File,Iterations,OutPrm)
     
     try:
         PAIRS={0:['r','mgas','YLOG'],1:['r','mstr','YLOG'],2:['r','zgas','YLOG'],3:['r','SFR','YLOG'],\
@@ -200,7 +200,7 @@ def MainPlots(File, Params, Iterations=15):
            7:['r','Ometals_tot','YLOG'], 8:['r','Ometals_cur','YLOG'],\
            9:['r','SF_events','YLOG'],10:['r','SP_events','YLOG'],11:['r','Tgas','YLOG']}
         
-        PlotGenericType(OutPrm['1d'], MODEL['1d'], PAIRS, Iterations, File+'_1d_', PATH, PlotColumns=3)
+        PlotGenericType(Model.OUTPUT_FILES['1d'], Model.MODEL['1d'], PAIRS, Iterations, File+'_1d_', PATH, PlotColumns=3)
     except Exception as e:
         print '1d ouput failed'
         print repr(e)
@@ -210,7 +210,7 @@ def MainPlots(File, Params, Iterations=15):
                    3:['r','sfe','YLOG'],4:['r','last_mstr','YLOG'],5:['r','ref_t','YLOG'],\
                    6:['r','sfr_t','YLOG'],  7:['r','TVEL']}
         
-        PlotGenericType(OutPrm['2d'], MODEL['2d'], PAIRS, Iterations, File+'_2d_', PATH, PlotColumns=2)
+        PlotGenericType(Model.OUTPUT_FILES['2d'], Model.MODEL['2d'], PAIRS, Iterations, File+'_2d_', PATH, PlotColumns=2)
     except Exception as e:
         print '2d ouput failed'
         print repr(e)
@@ -219,39 +219,41 @@ def MainPlots(File, Params, Iterations=15):
         PAIRS={0:['t','TSFR','YLOG'],   1:['t','ACC','YLOG'], 2:['t','SP_E','YLOG'],\
                    3:['t','TR_E','YLOG'],4:['t','OTFL','YLOG'],5:['t','ST_GAS_ACC','YLOG']}
         
-        PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
+        PlotGenericType(Model.OUTPUT_FILES['0d'], Model.MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
     except Exception as e:
         print '0d ouput failed'
         print repr(e)
     Cmd=0
     try:
-        Cmd=PlotCmds(MODEL['cmd'], MODEL['0d'], OutPrm['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
+        Cmd=PlotCmds(Model.MODEL['cmd'], Model.MODEL['0d'], Model.OUTPUT_FILES['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
         
-        PlotGenericType(OutPrm['0d'], MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
+        PlotGenericType(Model.OUTPUT_FILES['0d'], Model.MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
     except Exception as e:
         print 'cmd ouput failed'
         print repr(e)
     
-    WriteVOFiles(PATH, File, MODEL, Iterations, OutPrm)
-    
-    if Cmd !=0 :
-        WriteVOFiles_CMD_Only(PATH, File, Cmd,Iterations, OutPrm)
-    
+    for key in Model.OUTPUT_FILES.keys():
+        try:
+            Model.WriteVOFiles(key, PATH)
+        except:
+            pass
+#    
+#    if Cmd !=0 :
+#        WriteVOFiles_CMD_Only(PATH, File, Cmd,Iterations, OutPrm)
+#    
     global CLEAN_UP
     if CLEAN_UP==True:
-        clean_up(PATH, File, OutPrm, Params, Iterations)
+        Model.clean_up(PATH)
 
-def MainRun(File, Params, Iterations):
+def MainRun(File, Models, Iterations):
     for i in range(Iterations):
         subp.call('cp '+File+' '+File+'-'+str(i),shell=True,executable='/bin/sh')
         SEED=int(random.SystemRandom().random()*1e8)
         subp.call('sed -i \"s/SEED.*/SEED '+str(SEED)+'/\" '+File+'-'+str(i)+'',shell=True,executable='/bin/sh')
         subp.call('./galaxy_2.0 '+File+'-'+str(i),shell=True,executable='/bin/sh')
         
-        OutPrm=ModelOutputFiles(Params)
-        
         try:
-            for akey in OutPrm['cmd']:
+            for akey in Models.OUTPUT_FILES['cmd']:
                 cmd_out=File+'-'+str(i)+'_cmd_'+str(akey)+'.dat'
                 
                 lines=subp.Popen('cat '+cmd_out +' | wc -l', executable='/bin/sh', shell=True, stdout=subp.PIPE)
@@ -269,9 +271,14 @@ def MainRun(File, Params, Iterations):
     print "Calculations of the models complete!" 
     
 def Main(File, Iterations):
-    params=ReadModelParameters(os.getcwd()+'/',File)
-    MainRun(File, params, Iterations)
-    MainPlots(File, params, Iterations)
+#    params=ReadModelParameters(os.getcwd()+'/',File)
+    MODELS=Model_IO(os.getcwd()+'/', File, Iterations)
+    
+#    MainRun(File, MODELS, Iterations)
+    
+    MODELS.ReadModelOutput()
+
+    MainPlots(File, MODELS, Iterations)
     
 if __name__=='__main__':
     Main(File=sys.argv[1], Iterations=int(sys.argv[2]))

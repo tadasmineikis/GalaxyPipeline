@@ -15,7 +15,7 @@ class Model_IO:
         self.ReadModelParameters()
         self.ModelOutputFiles()
         self.FileEndings()
-        self.ReadModelOutput()
+#        self.ReadModelOutput()
         
     def is_number(self, s):
         try:
@@ -96,7 +96,7 @@ class Model_IO:
                 for akey in self.OUTPUT_FILES[key]:
                     self.MODEL[key][idx][akey]=self.read_file(self.FULL_PATH+'-'+str(idx)+ self.FILE_NAMES[key][akey])
         
-    def WriteVOFiles(self, key):
+    def WriteVOFiles(self, key, Output_Path):
         Res={}
         # Create a new VOTable file...
         votable = VOTableFile()
@@ -150,22 +150,22 @@ class Model_IO:
 
         Res[key]['table'].array[:]=stack[list(stack.dtype.names)][:]
         
-        votable.to_xml(self.FULL_PATH+'_'+str(key)+ ".xml", tabledata_format="binary", compressed=True)
+        votable.to_xml(Output_Path+self.FILE+'_'+str(key)+ ".xml", tabledata_format="binary", compressed=True)
         del votable, Res, FIELDS
                 
-    def clean_up(self):
+    def clean_up(self, Output_Path):
         ZIP_FILE_LIST=[]
         RM_FILE_LIST=[]
 
-        for itr in range(self.ITARATIONS):
+        for itr in range(self.ITERATIONS):
+            ZIP_FILE_LIST.append(self.FILE+'-'+str(itr)+'.log')
+            RM_FILE_LIST.append(self.FILE+'-'+str(itr))
             for key in self.FILE_NAMES.keys():
-                ZIP_FILE_LIST.append(self.FILE+'-'+str(itr)+'.log')
-                RM_FILE_LIST.append(self.FILE+'-'+str(itr))
                 for akey in self.FILE_NAMES[key].keys():
                     ZIP_FILE_LIST.append(self.FILE+'-'+str(itr)+self.FILE_NAMES[key][akey])
                     RM_FILE_LIST.append(self.FILE+'-'+str(itr)+self.FILE_NAMES[key][akey])
             for key in ['cmd_']:
-                for akey in self.OUPUT_FILES['cmd']:
+                for akey in self.OUTPUT_FILES['cmd']:
                     ZIP_FILE_LIST.append(key+self.FILE+'-'+str(itr)+'_'+str(akey))
                     RM_FILE_LIST.append(key+self.FILE+'-'+str(itr)+'_'+str(akey))
                 
@@ -183,6 +183,6 @@ class Model_IO:
         for line in RM_FILE_LIST:
             RM_FLIST+=line+' '
         
-        subp.call('zip '+self.FULL_PATH+'.zip '+ZIP_FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
-        subp.call('mv '+self.FILE+' '+self.FULL_PATH,shell=True,executable='/bin/sh',cwd=os.getcwd())
+        subp.call('zip '+Output_Path+self.FILE+'.zip '+ZIP_FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
+        subp.call('mv '+self.FILE+' '+Output_Path,shell=True,executable='/bin/sh',cwd=os.getcwd())
         subp.call('rm '+RM_FLIST,shell=True,executable='/bin/sh',cwd=os.getcwd())
