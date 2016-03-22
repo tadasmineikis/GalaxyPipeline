@@ -20,13 +20,13 @@ CLEAN_UP=False
 def read_file(name):
     f=open(name,'r')
     head=f.readline().split()
+    f.close()
     head[0]=head[0][1:]
     DTYPE={}
     for item in head:
         DTYPE[item]=np.float32
     df=pd.read_table(name,na_values='\"\"',names=head,header=0,\
     delim_whitespace=True,index_col=False,dtype=DTYPE,as_recarray=True)
-    f.close()
     return df
 
 def is_number(s):
@@ -533,7 +533,7 @@ def MainRun(File, Params, Iterations):
     
 def Main(File, Iterations):
     params=ReadModelParameters(os.getcwd()+'/',File)
-    MainRun(File, params, Iterations)
+#    MainRun(File, params, Iterations)
     MainPlots(File, params, Iterations)
     
 if __name__=='__main__':
