@@ -95,15 +95,8 @@ class Model_IO:
                 self.MODEL[key][idx]={}
                 for akey in self.OUTPUT_FILES[key]:
                     self.MODEL[key][idx][akey]=self.read_file(self.FULL_PATH+'-'+str(idx)+ self.FILE_NAMES[key][akey])
-        
-    def WriteVOFiles(self, key, Output_Path):
-        Res={}
-        # Create a new VOTable file...
-        votable = VOTableFile()
-        Res[key]={}
-        Res[key]['resource']=Resource(name=key)
-        votable.resources.append(Res[key]['resource'])
-        
+                    
+    def CoadFilesIntoRecArray(self, key):
         a_age=[]
         a_itr=[]
         a_model=[]
@@ -123,7 +116,7 @@ class Model_IO:
         names=st_model.dtype.names+('ModelAge','iteration',)
         dt=[]
         for name in names:
-            if name=='iteration' or name =='ModelAge':
+            if name=='iteration' or name =='ModelAge' or name=='ssp_index':
                 dt.append((name,'i4'))
             else:
                 dt.append((name,'f4'))
@@ -131,34 +124,58 @@ class Model_IO:
         stack=np.empty(a_stack.shape[0],dtype=dt)
         for i, nm in zip(range(a_stack.shape[1]),stack.dtype.names):
             stack[nm]=a_stack[:,i]
-        size=stack.size
+        return stack
         
+    def WriteCsvFiles(self, key, Output_Path, Compression=None):
+        RecArray=self. CoadFilesIntoRecArray(key)
+        df = pd.DataFrame(RecArray, columns=RecArray.dtype.names)
+        if Compression == 'gzip':
+            import gzip
+            f=gzip.GzipFile(Output_Path+self.FILE+'_'+key+'.csv.gz', 'wb')
+            df.to_csv(f,index=False,float_format='%.3f')
+            f.close()
+            return True
+        elif Compression==None:
+            df.to_csv(Output_Path+self.FILE+'_'+key+'.csv',index=False,float_format='%.3f')
+            return True
+        else:
+            print "Compresion parameter", Compression, "not supported."
+            return False
+        
+    def WriteVOFiles(self, key, Output_Path):
+        Res={}
+        # Create a new VOTable file...
+        votable = VOTableFile()
+        Res[key]={}
+        Res[key]['resource']=Resource(name=key)
+        votable.resources.append(Res[key]['resource'])
+        
+        RecArray=self. CoadFilesIntoRecArray(key)
+        
+        size=RecArray.size
         FIELDS=[]
-        for ckey in stack.dtype.names:
+        for ckey in RecArray.dtype.names:
             if ckey=='ssp_index' or ckey == 'iteration' or ckey =='ModelAge':
                 FIELDS.append( Field(votable, name=ckey,datatype="int", arraysize="1") )
             else:
                 FIELDS.append( Field(votable, name=ckey,datatype="float", arraysize="1") )
-
         Res[key]['table'] = Table(votable,name='Table_'+key,\
                 nrows=size)
-
         Res[key]['resource'].tables.append(Res[key]['table'])
-               
         Res[key]['table'].fields.extend(FIELDS)
         Res[key]['table'].create_arrays(size)
-
-        Res[key]['table'].array[:]=stack[list(stack.dtype.names)][:]
-        
+        Res[key]['table'].array[:]=RecArray[list(RecArray.dtype.names)][:]
         votable.to_xml(Output_Path+self.FILE+'_'+str(key)+ ".xml", tabledata_format="binary", compressed=True)
         del votable, Res, FIELDS
-                
+
     def clean_up(self, Output_Path):
         ZIP_FILE_LIST=[]
         RM_FILE_LIST=[]
 
         for itr in range(self.ITERATIONS):
             ZIP_FILE_LIST.append(self.FILE+'-'+str(itr)+'.log')
+            RM_FILE_LIST.append(self.FILE+'-'+str(itr)+'.log')
+            ZIP_FILE_LIST.append(self.FILE+'-'+str(itr))
             RM_FILE_LIST.append(self.FILE+'-'+str(itr))
             for key in self.FILE_NAMES.keys():
                 for akey in self.FILE_NAMES[key].keys():
@@ -176,7 +193,7 @@ class Model_IO:
             if not self.is_number(self.PARAMETERS[key][0]):
                 ZIP_FILE_LIST.append(self.PARAMETERS[key][0])
         
-        ZIP_FLIST=''
+        ZIP_FLIST=self.FILE+' '
         for line in ZIP_FILE_LIST:
             ZIP_FLIST+=line+' '
         RM_FLIST=''

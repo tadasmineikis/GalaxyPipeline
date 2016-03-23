@@ -16,15 +16,6 @@ from ModelIO import Model_IO
 #global variables
 CMD_COADDED_OUTPUT=True
 CLEAN_UP=True
-
-#def is_number(s):
-#    try:
-#        float(s)
-#        return True
-#    except ValueError:
-#        return False
-
-
     
 def MakePlot(ax,X,Y,PLOT_PRM):
     if 'LINE' in PLOT_PRM.keys():
@@ -87,10 +78,7 @@ def SetBasicPlotParams(X,Y, Keys):
     return {'XLIM':[XMIN,XMAX],'YLIM':[YMIN,YMAX],\
             'XLABEL':Keys[0].replace('_',''),'YLABEL':Keys[1].replace('_',''),\
            'YTICKS':YTICKS,'XTICKS':XTICKS, 'kwdict':{}}
-         
-
-    
-    
+           
 def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
     CMD={}
     SHARED_PRM=0
@@ -164,7 +152,7 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
         return CMD
     else:
         return 0
-                
+
 def PlotGenericType(OutPrm, Model, Pairs, Iterations, File, Path, PlotColumns=3):
     for akey in OutPrm:
         fig, ax = plt.subplots(len(Pairs.keys())/PlotColumns,PlotColumns,figsize=(16,16))
@@ -223,27 +211,27 @@ def MainPlots(File, Model, Iterations=15):
     except Exception as e:
         print '0d ouput failed'
         print repr(e)
-    Cmd=0
+
     try:
-        Cmd=PlotCmds(Model.MODEL['cmd'], Model.MODEL['0d'], Model.OUTPUT_FILES['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
-        
+        PlotCmds(Model.MODEL['cmd'], Model.MODEL['0d'], Model.OUTPUT_FILES['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
         PlotGenericType(Model.OUTPUT_FILES['0d'], Model.MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
     except Exception as e:
         print 'cmd ouput failed'
         print repr(e)
     
+    SUCCESS=False
     for key in Model.OUTPUT_FILES.keys():
         try:
-            Model.WriteVOFiles(key, PATH)
-        except:
-            pass
-#    
-#    if Cmd !=0 :
-#        WriteVOFiles_CMD_Only(PATH, File, Cmd,Iterations, OutPrm)
-#    
+            SUCCESS=Model.WriteCsvFiles(key, PATH, Compression='gzip')
+        except Exception as e:
+            print 'Coaded files ouput for ' +str(key)+' failed'
+            print repr(e)
+    #make clean up only if coaded output operation was successfull
     global CLEAN_UP
-    if CLEAN_UP==True:
+    if CLEAN_UP==True and SUCCESS:
         Model.clean_up(PATH)
+
+    
 
 def MainRun(File, Models, Iterations):
     for i in range(Iterations):
@@ -271,7 +259,6 @@ def MainRun(File, Models, Iterations):
     print "Calculations of the models complete!" 
     
 def Main(File, Iterations):
-#    params=ReadModelParameters(os.getcwd()+'/',File)
     MODELS=Model_IO(os.getcwd()+'/', File, Iterations)
     
 #    MainRun(File, MODELS, Iterations)
