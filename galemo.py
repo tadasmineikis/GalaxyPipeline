@@ -79,7 +79,8 @@ def SetBasicPlotParams(X,Y, Keys):
             'XLABEL':Keys[0].replace('_',''),'YLABEL':Keys[1].replace('_',''),\
            'YTICKS':YTICKS,'XTICKS':XTICKS, 'kwdict':{}}
            
-def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
+def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path,  t_axis='t-myr', \
+                        tsfr_axis='TSFR-msol-yr',  gas_axis='GAS-msol',  stars_axis='STARS-msol',  zgas_axis='ZGAS'):
     CMD={}
     SHARED_PRM=0
     FIRST_TIME=True
@@ -109,39 +110,39 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path):
             ax = plt.subplot(gs[0, 1]) #sfh
             akey_0d=Ages[-1]
             m0d=Model_0d[idx][akey_0d]
-            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['TSFR'], ['t','TSFR'])
+            PLOT_PRM=SetBasicPlotParams(m0d[t_axis]*1e-3,m0d[tsfr_axis], [t_axis,tsfr_axis])
             PLOT_PRM['kwdict']['alpha']=0.2
-            MakePlot(ax,m0d['t']*1e-3,m0d['TSFR'],PLOT_PRM)
-            tmin=np.amin(m0d['t']*1e-3)
-            tmax=np.amax(m0d['t']*1e-3)
-            tstep=(m0d['t'][1]-m0d['t'][0])
+            MakePlot(ax,m0d[t_axis]*1e-3,m0d[tsfr_axis],PLOT_PRM)
+            tmin=np.amin(m0d[t_axis]*1e-3)
+            tmax=np.amax(m0d[t_axis]*1e-3)
+            tstep=(m0d[t_axis][1]-m0d[t_axis][0])
             bins=np.arange(tmin,tmax+0.1,0.5)
-            ax.hist(m0d['t']*1e-3,weights=m0d['TSFR']/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True, color='k')
+            ax.hist(m0d[t_axis]*1e-3,weights=m0d[tsfr_axis]/(500./tstep),bins=bins,histtype='step',lw=2,zorder=1.,log=True, color='k')
             ax.set_ylim(bottom=1e-5)
             
             ax2=ax.twinx()
-            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['GAS'], ['t','GAS'])
+            PLOT_PRM=SetBasicPlotParams(m0d[t_axis]*1e-3,m0d[gas_axis], [t_axis,gas_axis])
             PLOT_PRM['YLOG']=True
             PLOT_PRM['YLABEL_COLOR']='red'
             PLOT_PRM['POINTS_COLOR']='red'
-            MakePlot(ax2,m0d['t']*1e-3,m0d['GAS'],PLOT_PRM)
-            GasMax=np.ceil( np.log10(max(m0d['GAS'])) )
+            MakePlot(ax2,m0d[t_axis]*1e-3,m0d[gas_axis],PLOT_PRM)
+            GasMax=np.ceil( np.log10(max(m0d[gas_axis])) )
             ax2.set_ylim(bottom=1e4, top=10**GasMax)
             ax2.set_yticks(np.logspace(4, GasMax, int(GasMax-4)+1))
             
             ax = plt.subplot(gs[1, 1]) #mh
-            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['ZGAS'], ['t','ZGAS'])
+            PLOT_PRM=SetBasicPlotParams(m0d[t_axis]*1e-3,m0d[zgas_axis], [t_axis,zgas_axis])
             PLOT_PRM['YLOG']=True
-            MakePlot(ax,m0d['t']*1e-3,m0d['ZGAS'],PLOT_PRM)
+            MakePlot(ax,m0d[t_axis]*1e-3,m0d[zgas_axis],PLOT_PRM)
             ax.set_ylim(1e-5, 0.2)
             ax.set_yticks(np.logspace(-5, -1, 5))
             ax2=ax.twinx()
-            PLOT_PRM=SetBasicPlotParams(m0d['t']*1e-3,m0d['STARS'], ['t','STARS'])
+            PLOT_PRM=SetBasicPlotParams(m0d[t_axis]*1e-3,m0d[stars_axis], [t_axis,stars_axis])
             PLOT_PRM['YLOG']=True
             PLOT_PRM['YLABEL_COLOR']='red'
             PLOT_PRM['POINTS_COLOR']='red'
-            MakePlot(ax2,m0d['t']*1e-3,m0d['STARS'],PLOT_PRM)
-            StarsMax=np.ceil( np.log10(max(m0d['STARS'])) )
+            MakePlot(ax2,m0d[t_axis]*1e-3,m0d[stars_axis],PLOT_PRM)
+            StarsMax=np.ceil( np.log10(max(m0d[stars_axis])) )
             ax2.set_ylim(bottom=100, top=10**StarsMax)
             ax2.set_yticks(np.logspace(2, StarsMax, int(StarsMax-2)+1))
             
@@ -183,10 +184,10 @@ def MainPlots(File, Model, Iterations=15):
 #    MODEL=ReadModelOutput(os.getcwd()+'/',File,Iterations,OutPrm)
     
     try:
-        PAIRS={0:['r','mgas','YLOG'],1:['r','mstr','YLOG'],2:['r','zgas','YLOG'],3:['r','SFR','YLOG'],\
-           4:['r','SFR100','YLOG'],5:['r','Ogas_tot','YLOG'],6:['r','Ogas_cur','YLOG'],\
-           7:['r','Ometals_tot','YLOG'], 8:['r','Ometals_cur','YLOG'],\
-           9:['r','SF_events','YLOG'],10:['r','SP_events','YLOG'],11:['r','Tgas','YLOG']}
+        PAIRS={0:['r-kpc','mgas-msol-pc2','YLOG'],1:['r-kpc','mstr-msol-pc2','YLOG'],2:['r-kpc','zgas','YLOG'],3:['r-kpc','SFR-msol-pc2-tstep','YLOG'],\
+           4:['r-kpc','SFR100-msol-pc2-10tsteps','YLOG'],5:['r-kpc','Ogas_tot','YLOG'],6:['r-kpc','Ogas_cur','YLOG'],\
+           7:['r-kpc','Ometals_tot','YLOG'], 8:['r-kpc','Ometals_cur','YLOG'],\
+           9:['r-kpc','SF_events-num','YLOG'],10:['r-kpc','SP_events-num','YLOG'],11:['r-kpc','Tgas-msol-pc2','YLOG']}
         
         PlotGenericType(Model.OUTPUT_FILES['1d'], Model.MODEL['1d'], PAIRS, Iterations, File+'_1d_', PATH, PlotColumns=3)
     except Exception as e:
@@ -194,9 +195,9 @@ def MainPlots(File, Model, Iterations=15):
         print repr(e)
         
     try:
-        PAIRS={0:['r','mgas','YLOG'],   1:['r','mstr','YLOG'], 2:['r','zgas','YLOG'],\
-                   3:['r','sfe','YLOG'],4:['r','last_mstr','YLOG'],5:['r','ref_t','YLOG'],\
-                   6:['r','sfr_t','YLOG'],  7:['r','TVEL']}
+        PAIRS={0:['r-kpc','mgas-msol-pc2','YLOG'],   1:['r-kpc','mstr-msol-pc2','YLOG'], 2:['r-kpc','zgas','YLOG'],\
+                   3:['r-kpc','sfe-ratio','YLOG'],4:['r-kpc','last_mstr-msol','YLOG'],5:['r-kpc','ref_t-tstep','YLOG'],\
+                   6:['r-kpc','sfr_t','YLOG'],  7:['r-kpc','TVEL']}
         
         PlotGenericType(Model.OUTPUT_FILES['2d'], Model.MODEL['2d'], PAIRS, Iterations, File+'_2d_', PATH, PlotColumns=2)
     except Exception as e:
@@ -204,8 +205,8 @@ def MainPlots(File, Model, Iterations=15):
         print repr(e)
 
     try:
-        PAIRS={0:['t','TSFR','YLOG'],   1:['t','ACC','YLOG'], 2:['t','SP_E','YLOG'],\
-                   3:['t','TR_E','YLOG'],4:['t','OTFL','YLOG'],5:['t','ST_GAS_ACC','YLOG']}
+        PAIRS={0:['t-myr','TSFR-msol','YLOG'],   1:['t-myr','ACC-msol-yr','YLOG'], 2:['t-myr','SP_E-num','YLOG'],\
+                   3:['t-myr','TR_E-num','YLOG'],4:['t-myr','OTFL-msol-yr','YLOG'],5:['t-myr','ST_GAS_ACC-msol-yr','YLOG']}
         
         PlotGenericType(Model.OUTPUT_FILES['0d'], Model.MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
     except Exception as e:
@@ -261,7 +262,7 @@ def MainRun(File, Models, Iterations):
 def Main(File, Iterations):
     MODELS=Model_IO(os.getcwd()+'/', File, Iterations)
     
-#    MainRun(File, MODELS, Iterations)
+    MainRun(File, MODELS, Iterations)
     
     MODELS.ReadModelOutput()
 

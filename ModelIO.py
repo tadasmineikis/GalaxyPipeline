@@ -182,9 +182,12 @@ class Model_IO:
                     ZIP_FILE_LIST.append(self.FILE+'-'+str(itr)+self.FILE_NAMES[key][akey])
                     RM_FILE_LIST.append(self.FILE+'-'+str(itr)+self.FILE_NAMES[key][akey])
             for key in ['cmd_']:
-                for akey in self.OUTPUT_FILES['cmd']:
-                    ZIP_FILE_LIST.append(key+self.FILE+'-'+str(itr)+'_'+str(akey))
-                    RM_FILE_LIST.append(key+self.FILE+'-'+str(itr)+'_'+str(akey))
+                try:
+                    for akey in self.OUTPUT_FILES['cmd']:
+                        ZIP_FILE_LIST.append(key+self.FILE+'-'+str(itr)+'_'+str(akey))
+                        RM_FILE_LIST.append(key+self.FILE+'-'+str(itr)+'_'+str(akey))
+                except:
+                    pass
                 
         ZIP_FILE_LIST.append(self.PARAMETERS['ACCRETION'][0])
         ZIP_FILE_LIST.append(self.PARAMETERS['ACCRETION'][1])
