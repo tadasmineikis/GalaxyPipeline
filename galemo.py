@@ -205,7 +205,7 @@ def MainPlots(File, Model, Iterations=15):
         print repr(e)
 
     try:
-        PAIRS={0:['t-myr','TSFR-msol','YLOG'],   1:['t-myr','ACC-msol-yr','YLOG'], 2:['t-myr','SP_E-num','YLOG'],\
+        PAIRS={0:['t-myr','TSFR-msol-yr','YLOG'],   1:['t-myr','ACC-msol-yr','YLOG'], 2:['t-myr','SP_E-num','YLOG'],\
                    3:['t-myr','TR_E-num','YLOG'],4:['t-myr','OTFL-msol-yr','YLOG'],5:['t-myr','ST_GAS_ACC-msol-yr','YLOG']}
         
         PlotGenericType(Model.OUTPUT_FILES['0d'], Model.MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
