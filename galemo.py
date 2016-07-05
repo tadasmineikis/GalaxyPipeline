@@ -185,8 +185,8 @@ def MainPlots(File, Model, Iterations=15):
     
     try:
         PAIRS={0:['r-kpc','mgas-msol-pc2','YLOG'],1:['r-kpc','mstr-msol-pc2','YLOG'],2:['r-kpc','zgas','YLOG'],3:['r-kpc','SFR-msol-pc2-tstep','YLOG'],\
-           4:['r-kpc','SFR100-msol-pc2-10tsteps','YLOG'],5:['r-kpc','Ogas_tot','YLOG'],6:['r-kpc','Ogas_cur','YLOG'],\
-           7:['r-kpc','Ometals_tot','YLOG'], 8:['r-kpc','Ometals_cur','YLOG'],\
+           4:['r-kpc','SFR100-msol-pc2-10tsteps','YLOG'],5:['r-kpc','Ogas_tot-msol','YLOG'],6:['r-kpc','Ogas_cur-msol-pc2-10tsteps','YLOG'],\
+           7:['r-kpc','Ometals_tot-msol','YLOG'], 8:['r-kpc','Ometals_cur-msol-pc2-10tsteps','YLOG'],\
            9:['r-kpc','SF_events-num','YLOG'],10:['r-kpc','SP_events-num','YLOG'],11:['r-kpc','Tgas-msol-pc2','YLOG']}
         
         PlotGenericType(Model.OUTPUT_FILES['1d'], Model.MODEL['1d'], PAIRS, Iterations, File+'_1d_', PATH, PlotColumns=3)
