@@ -66,13 +66,15 @@ def SetBasicPlotParams(X,Y, Keys):
     if YMIN==YMAX:
         YMIN=YMIN-0.5
         YMAX=YMAX-0.5
-    
-    XTICKS=np.arange(XMIN,XMAX+0.1,0.5)
-    if XTICKS.size>5:
+
+    if np.floor(XMAX+0.1)/XMIN <= 5:
+        XTICKS=np.arange(XMIN,XMAX+0.1,0.5)
+    else:
         XTICKS=np.linspace(XMIN,XMAX,5)
-    
-    YTICKS=np.arange(YMIN,YMAX+0.1,0.5)
-    if YTICKS.size>5:
+        
+    if np.floor(YMAX+0.1)/YMIN <= 5:
+        YTICKS=np.arange(YMIN,YMAX+0.1,0.5)
+    else:
         YTICKS=np.linspace(YMIN,YMAX,5)
         
     return {'XLIM':[XMIN,XMAX],'YLIM':[YMIN,YMAX],\
