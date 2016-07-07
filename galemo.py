@@ -39,7 +39,7 @@ def MakePlot(ax,X,Y,PLOT_PRM):
             if 'CMD' in PLOT_PRM.keys():
                 ax.set_xlabel(PLOT_PRM[key]+' - '+PLOT_PRM['YLABEL'], size=20)
             else:
-                PLOT_PRM['XLABEL']
+                ax.set_xlabel(PLOT_PRM[key])
         elif key == 'YLABEL':
             if 'YLABEL_COLOR' in PLOT_PRM.keys():
                 ax.set_ylabel(PLOT_PRM[key], size=20, color=PLOT_PRM['YLABEL_COLOR'])
