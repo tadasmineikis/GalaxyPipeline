@@ -1,6 +1,5 @@
 # fileIO class
 import numpy as np
-from astropy.io.votable.tree import VOTableFile, Resource, Table, Field
 import pandas as pd
 import subprocess as subp
 import os
@@ -143,6 +142,7 @@ class Model_IO:
             return False
         
     def WriteVOFiles(self, key, Output_Path):
+	from astropy.io.votable.tree import VOTableFile, Resource, Table, Field
         Res={}
         # Create a new VOTable file...
         votable = VOTableFile()
