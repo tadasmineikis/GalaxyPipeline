@@ -15,7 +15,7 @@ from ModelIO import Model_IO
 
 #global variables
 CMD_COADDED_OUTPUT=True
-CLEAN_UP=False
+CLEAN_UP=True
     
 def MakePlot(ax,X,Y,PLOT_PRM):
     if 'LINE' in PLOT_PRM.keys():
@@ -266,7 +266,7 @@ def MainRun(File, Models, Iterations):
 def Main(File, Iterations):
     MODELS=Model_IO(os.getcwd()+'/', File, Iterations)
     
-#    MainRun(File, MODELS, Iterations)
+    MainRun(File, MODELS, Iterations)
     
     MODELS.ReadModelOutput()
 
