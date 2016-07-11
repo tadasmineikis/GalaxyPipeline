@@ -15,7 +15,7 @@ from ModelIO import Model_IO
 
 #global variables
 CMD_COADDED_OUTPUT=True
-CLEAN_UP=False
+CLEAN_UP=True
     
 def MakePlot(ax,X,Y,PLOT_PRM):
     if 'LINE' in PLOT_PRM.keys():
@@ -69,12 +69,12 @@ def SetBasicPlotParams(X,Y, Keys):
         YMIN=YMIN-0.5
         YMAX=YMAX-0.5
 
-    if np.floor(XMAX+0.1)/XMIN <= 5:
+    if (np.floor(XMAX+0.1)-XMIN)/0.5 <= 5:
         XTICKS=np.arange(XMIN,XMAX+0.1,0.5)
     else:
         XTICKS=np.linspace(XMIN,XMAX,5)
         
-    if np.floor(YMAX+0.1)/YMIN <= 5:
+    if (np.floor(YMAX+0.1)-YMIN)/0.5 <= 5:
         YTICKS=np.arange(YMIN,YMAX+0.1,0.5)
     else:
         YTICKS=np.linspace(YMIN,YMAX,5)
@@ -266,7 +266,7 @@ def MainRun(File, Models, Iterations):
 def Main(File, Iterations):
     MODELS=Model_IO(os.getcwd()+'/', File, Iterations)
     
-#    MainRun(File, MODELS, Iterations)
+    MainRun(File, MODELS, Iterations)
     
     MODELS.ReadModelOutput()
 
