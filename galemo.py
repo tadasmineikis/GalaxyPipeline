@@ -14,7 +14,6 @@ from ModelIO import Model_IO
 
 
 #global variables
-CMD_COADDED_OUTPUT=True
 CLEAN_UP=True
     
 def MakePlot(ax,X,Y,PLOT_PRM):
@@ -59,8 +58,12 @@ def SetBasicPlotParams(X,Y, Keys):
         y_finite=Y[finite]
         finite=np.nonzero(y_finite)
         ylog=np.log10(y_finite[finite])
-        YMIN=np.floor( np.amin(ylog) )
-        YMAX=np.ceil( np.amax(ylog) )
+        if ylog.size != 0:
+            YMIN=np.floor( np.amin(ylog) )
+            YMAX=np.ceil( np.amax(ylog) )
+        else:
+            YMIN=0
+            YMAX=1
     else:
         YMIN=np.floor( np.amin(Y) )
         YMAX=np.ceil( np.amax(Y) )
@@ -85,11 +88,10 @@ def SetBasicPlotParams(X,Y, Keys):
            
 def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path,  t_axis='t-myr', \
                         tsfr_axis='TSFR-msol-yr',  gas_axis='GAS-msol',  stars_axis='STARS-msol',  zgas_axis='ZGAS'):
-    CMD={}
+
     SHARED_PRM=0
     FIRST_TIME=True
-    for idx in range(Iterations):
-        CMD[idx]={}
+
     for akey in Ages:
         for idx in range(Iterations):
             fig=plt.figure(figsize=(12,8))
@@ -106,10 +108,6 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path,  t_axis
             PLOT_PRM['YINVERSE']=True
             PLOT_PRM['CMD']=True
             MakePlot(ax,cmd[Filters[0]]-cmd[Filters[1]],cmd[Filters[1]],PLOT_PRM)
-            
-            global CMD_COADDED_OUTPUT
-            if CMD_COADDED_OUTPUT == False:
-                del CMD[idx][akey], cmd
             
             ax = plt.subplot(gs[0, 1]) #sfh
             akey_0d=Ages[-1]
@@ -153,10 +151,7 @@ def PlotCmds(Model_cmd, Model_0d, Ages, Filters, Iterations, File, Path,  t_axis
             fig.savefig(Path+File+'_CMD_'+str(akey)+'_ITERATION-'+str(idx)+'.png', dpi=150)
             plt.close()
             
-    if CMD_COADDED_OUTPUT == True:
-        return CMD
-    else:
-        return 0
+    return 0
 
 def PlotGenericType(OutPrm, Model, Pairs, Iterations, File, Path, PlotColumns=3):
     for akey in OutPrm:
