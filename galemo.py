@@ -290,7 +290,7 @@ if __name__=='__main__':
         else:
             print 'Passed 3rd parameter:', sys.argv[3], ' doesn\'t look like a defintion of phot sys for the cmd [cmd-acs or cmd-ubv]'
     except:
-        print 'UBVRIJHK phot system will be used or cmd\'s '
+        print 'UBVRIJHK phot system will be used for cmd\'s '
         CMD_PHOT_SYS='UBV'
     Main(File=sys.argv[1], Iterations=int(sys.argv[2]), CmdPhotSys=CMD_PHOT_SYS)
     
