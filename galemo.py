@@ -181,7 +181,7 @@ def PlotGenericType(OutPrm, Model, Pairs, Iterations, File, Path, PlotColumns=3)
         fig.savefig(Path+File+'AGE_'+str(akey)+'.png', dpi=150)
         plt.close()
     
-def MainPlots(File, Model, Iterations=15):
+def MainPlots(File, Model, Iterations=15, CmdPhotSys='UBV'):
     subp.call('mkdir '+'Dir_'+File,shell=True,executable='/bin/sh', cwd=os.getcwd())
     PATH='Dir_'+File+"/"
 #    OutPrm=ModelOutputFiles(Params)
@@ -218,7 +218,10 @@ def MainPlots(File, Model, Iterations=15):
         print repr(e)
 
     try:
-        PlotCmds(Model.MODEL['cmd'], Model.MODEL['0d'], Model.OUTPUT_FILES['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
+        if CmdPhotSys == 'UBV':
+            PlotCmds(Model.MODEL['cmd'], Model.MODEL['0d'], Model.OUTPUT_FILES['cmd'], ['o_B', 'o_I'], Iterations, File, PATH)
+        elif CmdPhotSys == 'WFC-ACS':
+            PlotCmds(Model.MODEL['cmd'], Model.MODEL['0d'], Model.OUTPUT_FILES['cmd'], ['o_F606W', 'o_F814W'], Iterations, File, PATH)
         PlotGenericType(Model.OUTPUT_FILES['0d'], Model.MODEL['0d'], PAIRS, Iterations, File+'_0d_', PATH, PlotColumns=2)
     except Exception as e:
         print 'cmd ouput failed'
@@ -238,7 +241,7 @@ def MainPlots(File, Model, Iterations=15):
 
     
 
-def MainRun(File, Models, Iterations):
+def MainRun(File, Models, Iterations, CmdPhotSys='UBV'):
     for i in range(Iterations):
         subp.call('cp '+File+' '+File+'-'+str(i),shell=True,executable='/bin/sh')
         SEED=int(random.SystemRandom().random()*1e8)
@@ -252,28 +255,49 @@ def MainRun(File, Models, Iterations):
                 lines=subp.Popen('cat '+cmd_out +' | wc -l', executable='/bin/sh', shell=True, stdout=subp.PIPE)
                 lines=lines.communicate()[0].rstrip('\n')
                 lines=int(lines)-1 # to account for the header
-                template=open('template').read()
+                template=-1
+                if CmdPhotSys=='UBV':
+                    template=open('template-ubv').read()
+                elif CmdPhotSys=='WFC-ACS':
+                    template=open('template-wfc_acs').read()
                 SEED=int(random.SystemRandom().random()*1e8)
                 tmp=template.replace('SEED', 'seed '+str(SEED))
+                template.close()
                 tmp=tmp.replace('GALEMO_RESULTS', 'galemo_results '+str(lines)+' '+cmd_out)
                 tmp=tmp.replace('OUT', 'out '+cmd_out.replace('dat', 'cmd'))
                 subp.call('echo \"'+tmp+'\" >'+'cmd_'+File+'-'+str(i)+'_'+str(akey),shell=True,executable='/bin/sh')
-                subp.call('./gCMD_0.21.5 cmd_'+File+'-'+str(i)+'_'+str(akey),shell=True,executable='/bin/sh')
+                
+                if CmdPhotSys=='UBV':
+                    subp.call('./gCMD_0.21.5_ubv cmd_'+File+'-'+str(i)+'_'+str(akey),shell=True,executable='/bin/sh')
+                elif CmdPhotSys=='WFC-ACS':
+                    subp.call('./gCMD_0.21.5_acs cmd_'+File+'-'+str(i)+'_'+str(akey),shell=True,executable='/bin/sh')
+                
         except:
             print 'CMDs missing in the output'
     print "Calculations of the models complete!" 
     
-def Main(File, Iterations):
+def Main(File, Iterations, CmdPhotSys):
     MODELS=Model_IO(os.getcwd()+'/', File, Iterations)
     
-    MainRun(File, MODELS, Iterations)
+    MainRun(File, MODELS, Iterations, CmdPhotSys)
     
     MODELS.ReadModelOutput()
 
-    MainPlots(File, MODELS, Iterations)
+    MainPlots(File, MODELS, Iterations, CmdPhotSys)
     
 if __name__=='__main__':
-    Main(File=sys.argv[1], Iterations=int(sys.argv[2]))
+    CMD_PHOT_SYS=''
+    try:
+        if sys.argv[3]=='cmd-acs':
+            CMD_PHOT_SYS='WFC-ACS'
+        elif sys.argv[3]=='cmd-ubv':
+            CMD_PHOT_SYS='UBV'
+        else:
+            print 'Passed 3rd parameter:', sys.argv[3], ' doesn\'t look like a defintion of phot sys for the cmd [cmd-acs or cmd-ubv]'
+    except:
+        print 'UBVRIJHK phot system will be used or cmd\'s '
+        CMD_PHOT_SYS='UBV'
+    Main(File=sys.argv[1], Iterations=int(sys.argv[2]), CmdPhotSys=CMD_PHOT_SYS)
     
     
     
