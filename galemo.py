@@ -257,7 +257,6 @@ def MainRun(File, Models, Iterations, CmdPhotSys='UBV'):
                     template=open('template-wfc_acs').read()
                 SEED=int(random.SystemRandom().random()*1e8)
                 tmp=template.replace('SEED', 'seed '+str(SEED))
-                template.close()
                 tmp=tmp.replace('GALEMO_RESULTS', 'galemo_results '+str(lines)+' '+cmd_out)
                 tmp=tmp.replace('OUT', 'out '+cmd_out.replace('dat', 'cmd'))
                 subp.call('echo \"'+tmp+'\" >'+'cmd_'+File+'-'+str(i)+'_'+str(akey),shell=True,executable='/bin/sh')
